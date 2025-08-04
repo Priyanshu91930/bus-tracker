@@ -17,7 +17,26 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.bus_tracker"
+      "package": "com.anonymous.bus_tracker",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": {
+            "scheme": "com.anonymous.bus_tracker",
+            "host": "oauth2redirect"
+          },
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "config": {
+        "googleSignIn": {
+          "certificateHash": "YOUR_CERTIFICATE_HASH"
+        }
+      }
     },
     "web": {
       "bundler": "metro",

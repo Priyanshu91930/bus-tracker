@@ -1,21 +1,21 @@
+import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, FlatList, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import UserProfile from './components/UserProfile';
-// Only import react-native-maps for native platforms
-let MapView, Marker;
-try {
-  if (Platform.OS !== 'web') {
-    MapView = require('react-native-maps').default;
-    Marker = require('react-native-maps').Marker;
-  }
-} catch (error) {
-  console.log('react-native-maps not available for web');
-}
+import {
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { useAuth } from './context/AuthContext';
 
-// List of unique bus stop locations (replace with your deduplicated list)
+// List of unique bus stop locations
 const BUS_STOP_LOCATIONS = [
-    "Clock Tower" ,
+    "Clock Tower",
     "Darshanlal Chowk",
     "Saharanpur Chowk",
     "ISBT",
@@ -24,6 +24,17 @@ const BUS_STOP_LOCATIONS = [
     "Matawala Bagh",
     "Daudwala",
     "Mathurawala",
+    "Railway Station",
+    "Bus Stand",
+    "College Gate",
+    "Market Square",
+    "Hospital",
+    "Police Station",
+    "Post Office",
+    "Bank",
+    "School",
+    "Temple",
+    "Park",
     "Vishnupuram",
     "Bangali Kothi",
     "Kargi Chowk",
@@ -91,7 +102,7 @@ const BUS_STOP_LOCATIONS = [
     "Dilaram Bazar",
     "Great Value",
     "Prem Nagar",
-    "Balliwalachowk"  // ...add all other unique stops
+    "Balliwalachowk"  
 ];
 
 // Mock data: Map bus stop to a bus number and driver location (for demo)
@@ -101,17 +112,19 @@ const BUS_STOP_DATA = {
   "Saharanpur Chowk": { busNumber: 42, driverLocation: { latitude: 30.3200, longitude: 78.0400 } },
   "ISBT": { busNumber: 11, driverLocation: { latitude: 30.3150, longitude: 78.0320 } },
   "Geu": { busNumber: 9, driverLocation: { latitude: 30.3100, longitude: 78.0300 } },
-  // ...add more as needed
 };
 
-const DRIVER_ICON = require('../assets/images/clg.png'); // Using clg.png instead of goggle.png
-const BUS_ICON = require('../assets/images/pngfind.com-bus-image-png-6424101.png'); // Replace with your bus icon
+const DRIVER_ICON = require('../assets/images/clg.png');
+const BUS_ICON = require('../assets/images/pngfind.com-bus-image-png-6424101.png');
 
 export default function HomePage() {
+  const navigation = useNavigation();
+  const { user, signOut } = useAuth();
   const [permissionStatus, setPermissionStatus] = useState(null);
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState(BUS_STOP_LOCATIONS);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
 
   // Request location permission on mount
   useEffect(() => {
@@ -136,21 +149,47 @@ export default function HomePage() {
 
   const handleLocationPress = (location) => {
     setSelectedLocation(location);
+    navigation.navigate('MapView', { selectedStop: location });
   };
 
   // Get bus and driver info for selected location
   const busData = selectedLocation ? BUS_STOP_DATA[selectedLocation] : null;
 
-  // Helper for Google Maps iframe URL
-  const getGoogleMapsEmbedUrl = (lat, lng) =>
-    `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+  // Handle Sign Out
+  const handleSignOut = async () => {
+    const result = await signOut();
+    if (result.success) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    }
+  };
 
   return (
     <View style={styles.mainContainer}>
-      <UserProfile />
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Find Your Bus Stop</Text>
-        <Text style={styles.subtitle}>Enter your stop location below. Suggestions will appear as you type. Tap a location to view it on the map.</Text>
+      {/* Header with Profile Button */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Bus Tracker</Text>
+        <TouchableOpacity 
+          style={styles.profileButton} 
+          onPress={() => setIsProfileModalVisible(true)}
+        >
+          <Text style={styles.profileButtonText}>
+            {user?.name?.charAt(0).toUpperCase() || 'P'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView 
+        style={styles.scrollContainer} 
+        contentContainerStyle={styles.container}
+      >
+        <Text style={styles.subtitle}>Welcome to your bus tracking dashboard</Text>
+        
+        {/* Removed navigation button to BusStopFinder */}
+        
+        <Text style={styles.sectionTitle}>Quick Search:</Text>
         <TextInput
           placeholder="Type your stop..."
           value={input}
@@ -163,68 +202,52 @@ export default function HomePage() {
           data={suggestions}
           keyExtractor={item => item}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.locationCard} onPress={() => handleLocationPress(item)}>
+            <TouchableOpacity 
+              style={styles.locationCard} 
+              onPress={() => handleLocationPress(item)}
+            >
               <Text style={styles.locationName}>{item}</Text>
             </TouchableOpacity>
           )}
           style={styles.suggestionsList}
         />
-        {selectedLocation && busData && (
-          <View style={styles.mapContainer}>
-            <View style={styles.mapHeader}>
-              <View style={{ flex: 1 }} />
-              <View style={styles.driverInfo}>
-                <Image source={DRIVER_ICON} style={styles.driverIcon} />
-                <Text style={styles.busNumberText}>Bus #{busData.busNumber}</Text>
-              </View>
-            </View>
-            {Platform.OS === 'web' ? (
-              <View style={styles.webMapWrapper}>
-                <iframe
-                  title="Bus Location Map"
-                  width="100%"
-                  height="220"
-                  frameBorder="0"
-                  style={{ border: 0, borderRadius: 16 }}
-                  src={getGoogleMapsEmbedUrl(busData.driverLocation.latitude, busData.driverLocation.longitude)}
-                  allowFullScreen
-                />
-                <Image
-                  source={BUS_ICON}
-                  style={{
-                    position: 'absolute',
-                    left: '50%',
-                    top: '50%',
-                    width: 36,
-                    height: 36,
-                    transform: [{ translateX: -18 }, { translateY: -18 }],
-                    zIndex: 10,
-                  }}
-                />
-              </View>
-            ) : (
-              <MapView
-                style={styles.map}
-                initialRegion={{
-                  latitude: busData.driverLocation.latitude,
-                  longitude: busData.driverLocation.longitude,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }}
-              >
-                <Marker coordinate={busData.driverLocation}>
-                  <Image source={BUS_ICON} style={styles.busIcon} />
-                </Marker>
-              </MapView>
-            )}
-          </View>
-        )}
-        {permissionStatus !== 'granted' && (
-          <Text style={styles.permissionWarning}>
-            Location permission is required to suggest the nearest stop.
-          </Text>
-        )}
       </ScrollView>
+
+      {/* Profile Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isProfileModalVisible}
+        onRequestClose={() => setIsProfileModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Profile</Text>
+            <Text style={styles.modalEmail}>{user?.email || 'No email'}</Text>
+            <Text style={styles.modalName}>{user?.name || 'No name'}</Text>
+            
+            <TouchableOpacity 
+              style={styles.signOutButton} 
+              onPress={handleSignOut}
+            >
+              <Text style={styles.signOutButtonText}>Sign Out</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.closeModalButton}
+              onPress={() => setIsProfileModalVisible(false)}
+            >
+              <Text style={styles.closeModalButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {permissionStatus !== 'granted' && (
+        <Text style={styles.permissionWarning}>
+          Location permission is required to suggest the nearest stop.
+        </Text>
+      )}
     </View>
   );
 }
@@ -233,6 +256,14 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: '#f7f7f8',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 15,
   },
   scrollContainer: {
     flex: 1,
@@ -243,17 +274,34 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#0057ff',
-    marginBottom: 8,
-    textAlign: 'center',
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#0057ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   subtitle: {
     fontSize: 15,
     color: '#444',
     marginBottom: 18,
     textAlign: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
   },
   input: {
     borderWidth: 1,
@@ -291,63 +339,75 @@ const styles = StyleSheet.create({
     color: '#0057ff',
     marginBottom: 4,
   },
-  mapContainer: {
-    marginTop: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
-  mapHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#f7f7f8',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  driverInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  driverIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 8,
-  },
-  busNumberText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0057ff',
-  },
-  map: {
-    width: Dimensions.get('window').width - 40,
-    height: 220,
-  },
-  webMapWrapper: {
-    width: '100%',
-    height: 220,
-    position: 'relative',
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#eee',
-    marginBottom: 0,
-  },
-  busIcon: {
-    width: 36,
-    height: 36,
-    resizeMode: 'contain',
-  },
   permissionWarning: {
     color: 'red',
     marginTop: 20,
     fontSize: 15,
     textAlign: 'center',
   },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#0057ff'
+  },
+  modalEmail: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 10
+  },
+  modalName: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: '#333'
+  },
+  signOutButton: {
+    backgroundColor: '#ff6b6b',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    marginBottom: 10,
+    width: '100%',
+    alignItems: 'center'
+  },
+  signOutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  closeModalButton: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    width: '100%',
+    alignItems: 'center'
+  },
+  closeModalButtonText: {
+    color: '#333',
+    fontSize: 16
+  }
 }); 

@@ -22,8 +22,11 @@ export const USERS_COLLECTION_ID = ENV.APPWRITE_USERS_COLLECTION_ID;
 const getCallbackUrl = () => {
     if (Platform.OS === 'web') {
         return 'http://localhost:19006'; // Web development server
+    } else if (Platform.OS === 'android') {
+        // Use a more comprehensive callback URL for Android
+        return 'https://auth.bustracker.app/oauth2redirect';
     } else {
-        return 'exp://127.0.0.1:19000/--/'; // Expo Go for mobile development
+        return 'exp://127.0.0.1:19000/--/'; // Fallback for other platforms
     }
 };
 
@@ -107,17 +110,77 @@ export const appwriteAuth = {
     signInWithGoogle: async () => {
         try {
             const callbackUrl = getCallbackUrl();
-            console.log('🔗 Using callback URL:', callbackUrl);
+            console.log('🔍 OAuth Debugging Information');
+            console.log('📱 Platform:', Platform.OS);
+            console.log('🔗 Callback URL:', callbackUrl);
             
-            const response = await account.createOAuth2Session(
-                'google',
-                callbackUrl, // Success callback
-                callbackUrl  // Failure callback
-            );
-            return { success: true, data: response };
+            // Comprehensive platform-specific OAuth handling
+            if (Platform.OS === 'android') {
+                console.log('🤖 Android OAuth Initialization');
+                
+                // Detailed OAuth session creation
+                try {
+                    console.log('🌐 Initiating OAuth Session');
+                    const oauthResult = await account.createOAuth2Session(
+                        'google', 
+                        `${callbackUrl}/success`, // Success callback
+                        `${callbackUrl}/failure`,  // Failure callback
+                        'popup' // Force browser popup
+                    );
+                    
+                    console.log('✅ OAuth Session Created Successfully', oauthResult);
+                    return { 
+                        success: true, 
+                        message: 'OAuth browser redirect initiated',
+                        details: {
+                            platform: Platform.OS,
+                            callbackUrl: callbackUrl,
+                            oauthResult: JSON.stringify(oauthResult)
+                        }
+                    };
+                } catch (oauthError) {
+                    console.error('❌ OAuth Session Creation Failed', {
+                        errorName: oauthError.name,
+                        errorMessage: oauthError.message,
+                        errorStack: oauthError.stack
+                    });
+                    
+                    return { 
+                        success: false, 
+                        error: 'OAuth session creation failed',
+                        details: {
+                            platform: Platform.OS,
+                            callbackUrl: callbackUrl,
+                            errorType: oauthError.name,
+                            errorMessage: oauthError.message
+                        }
+                    };
+                }
+            } else {
+                // Existing implementation for other platforms
+                const response = await account.createOAuth2Session(
+                    'google',
+                    callbackUrl, // Success callback
+                    callbackUrl  // Failure callback
+                );
+                return { success: true, data: response };
+            }
         } catch (error) {
-            console.error('❌ Google OAuth error:', error);
-            return { success: false, error: error.message };
+            console.error('❌ Catastrophic OAuth Error', {
+                errorName: error.name,
+                errorMessage: error.message,
+                errorStack: error.stack
+            });
+            
+            return { 
+                success: false, 
+                error: error.message,
+                details: {
+                    platform: Platform.OS,
+                    callbackUrl: getCallbackUrl(),
+                    errorType: error.name
+                }
+            };
         }
     },
 
