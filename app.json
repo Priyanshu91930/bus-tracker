@@ -1,11 +1,20 @@
 {
   "expo": {
+<<<<<<< HEAD
     "name": "busmate",
     "slug": "busmate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "busmate",
+=======
+    "name": "bus_tracker",
+    "slug": "bus_tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/clg.png",
+    "scheme": "bustracker",
+>>>>>>> eaa3e8670fdfb10ec56c81b6afeb3d30c35020ff
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -13,6 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
+<<<<<<< HEAD
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
@@ -29,6 +39,42 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
+=======
+        "foregroundImage": "./assets/images/clg.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.bus_tracker",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": {
+            "scheme": "com.anonymous.bus_tracker",
+            "host": "oauth2redirect"
+          },
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "config": {
+        "googleSignIn": {
+          "certificateHash": "YOUR_CERTIFICATE_HASH"
+        }
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/clg.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/clg.png",
+>>>>>>> eaa3e8670fdfb10ec56c81b6afeb3d30c35020ff
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
